@@ -12,6 +12,10 @@ typedef struct {
 } vector2;
 
 typedef struct {
+        double M[3][3];
+} matrix3;
+
+typedef struct {
         int v, vt, vn;
 } vertex;
 
@@ -22,6 +26,7 @@ typedef struct {
 typedef struct {
         vertex v[3];
         mtl* texture;
+        matrix3 T;
 } face;
 
 
@@ -40,6 +45,20 @@ public:
         face* faceArray;
 
         int nVertex, nTexture, nNormal, nFace;
+};
+
+class world2Tangent
+{
+public:
+        world2Tangent();
+        void Translate(); // main initial function
+        void Cross(const vector3, const vector3, vector3&);
+        void Normalize(vector3&);
+        void Transpose(matrix3&); // maybe not needed in translation
+        void TangentFace(const face, matrix3&);
+        void objLoadFile(char* filename);
+
+        objReader *obj;
 };
 
 #endif
