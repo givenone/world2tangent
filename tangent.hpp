@@ -26,7 +26,7 @@ typedef struct {
 typedef struct {
         vertex v[3];
         mtl* texture;
-        matrix3 T;
+        vector3 M[3];
 } face;
 
 
@@ -36,6 +36,7 @@ public:
         objReader();
         void objLoadModel();
         void objLoadFile(char* filename);
+        void objSaveFile(char* filename);
         char* m;
 
         size_t size;
@@ -54,9 +55,8 @@ public:
         void Translate(); // main initial function
         void Cross(const vector3, const vector3, vector3&);
         void Normalize(vector3&);
-        void Transpose(matrix3&); // maybe not needed in translation
-        void TangentFace(const face, matrix3&);
-        void objLoadFile(char* filename);
+        void Transpose(vector3[]); // Inverse in orthonormal matrix.
+        void TangentFace(face&);
 
         objReader *obj;
 };
