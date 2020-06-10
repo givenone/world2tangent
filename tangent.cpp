@@ -1,92 +1,8 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <memory.h>
-#include <math.h>
-#include <iostream>
 #include "tangent.hpp"
 
 using namespace std;
 
-objReader::objReader()
-{
-        m = NULL;
-        nVertex = 0;
-        nFace = 0;
-        nNormal = 0;
-        nTexture = 0;
-        size = 0;
-}
-
-void objReader::objLoadFile(char* filename)
-{
-        {
-                size_t bytes = 0;
-                FILE* file = fopen(filename, "rt");
-
-                if (file != NULL) {
-                        fseek(file, 0, SEEK_END);
-                        size_t end = ftell(file);
-                        fseek(file, 0, SEEK_SET);
-
-                        m = (char*) malloc(end);
-                        bytes = fread(m, sizeof(char), end, file);
-
-                        fclose(file);
-                }
-
-                size = bytes;
-        }
-}
-
-void objReader::objLoadModel()
-{
-        char* p = NULL, * e = NULL;
-        bool start = true;
-        mtl *texture = 0;
-        p = m;
-        e = m + size;
-
-        // First, count numbers of v, vt, vn, f.
-        while (p != e) {
-                if (memcmp(p, "f",  1) == 0) nFace++;
-                else if (memcmp(p, "vt",  2) == 0) nTexture++;
-                else if (memcmp(p, "vn",  2) == 0) nNormal++;
-                else if (memcmp(p, "v",  1) == 0) nVertex++;
-                while (*p++ != (char) 0x0A);
-        }
-
-        vertexArray = (vector3*) malloc(sizeof(vector3) * nVertex);
-        normalArray = (vector3*) malloc(sizeof(vector3) * nNormal);
-        textureArray = (vector2*) malloc(sizeof(vector2) * nTexture);
-        faceArray = (face*) malloc(sizeof(face) * nFace);
-
-        p = m;
-        int nV = 0, nF = 0, nT = 0, nN = 0;
-
-        while (p != e) {
-                if (memcmp(p, "v", 1) == 0) {
-                        sscanf(p, "v %lf %lf %lf", &vertexArray[nV].x, &vertexArray[nV].y, &vertexArray[nV].z);
-                        nV++;
-                } else if (memcmp(p, "vt", 2) == 0) {
-                        sscanf(p, "vt %lf %lf", &textureArray[nT].u, &textureArray[nT].v);
-                        nT++;
-                } else if (memcmp(p, "vn", 2) == 0) {
-                        sscanf(p, "vn %lf %lf %lf", &normalArray[nN].x, &normalArray[nT].y, &normalArray[nN].z);
-                        nN++;
-                } else if (memcmp(p, "f", 1) == 0) {
-                        sscanf(p, "f %d/%d/%d %d/%d/%d %d/%d/%d", 
-                        &faceArray[nF].v[0].v, &faceArray[nF].v[0].vt, &faceArray[nF].v[0].vn,
-                        &faceArray[nF].v[1].v, &faceArray[nF].v[1].vt, &faceArray[nF].v[1].vn,
-                        &faceArray[nF].v[2].v, &faceArray[nF].v[2].vt, &faceArray[nF].v[2].vn);
-                        faceArray[nF].texture = texture;
-                        nF++;
-                } else if (memcmp(p, "usemtl", 6) == 0) {
-                        texture = (mtl*) malloc(sizeof(mtl));
-                        sscanf(p, "usemtl %s", &(texture->material));
-                }
-                while (*p++ != (char) 0x0A);
-        }
-}
+world2Tangent::world2Tangent(){};
 
 void world2Tangent::Translate()
 {
@@ -100,7 +16,9 @@ void world2Tangent::Translate()
         for(int ver = 0; ver < 3; ver ++)
         {
             int normal_idx = f.v[ver].vn;
-            vector3 nxyz = obj->vertexArray[normal_idx];
+            vector3 nxyz = obj->normalArray[normal_idx];
+
+            // [nx, ny, nz] dot M( ([T, B, N]^-1)^T)
             tangentNormalArray[normal_idx].x = nxyz.x * f.M[0].x + nxyz.y * f.M[1].x + nxyz.z * f.M[2].x;
             tangentNormalArray[normal_idx].y = nxyz.x * f.M[0].y + nxyz.y * f.M[1].y + nxyz.z * f.M[2].y;
             tangentNormalArray[normal_idx].z = nxyz.x * f.M[0].z + nxyz.y * f.M[1].z + nxyz.z * f.M[2].z;
@@ -149,7 +67,6 @@ void world2Tangent::TangentFace(face& f)
     // idx :: f.v[i].v / vt / vn
     // p0 = vertexArray[idx_t], t0 = textureArray[idx_t]
     // T, B, N -> f.M
-
     // point vector :: x, y, z
     vector3 p0 = obj->vertexArray[f.v[0].v];
     vector3 p1 = obj->vertexArray[f.v[1].v];
@@ -177,28 +94,48 @@ void world2Tangent::TangentFace(face& f)
     double det = u1x * u2y - u2x * u1y;
  
     // M :: t (M[0]), b (M[1]), n (M[2]) of surface (3 row vector)
+
+    // Tangent :: (v1 * uv2y - v2 * uv1y) / det
+    // Bitangent :: (v2 * uv1x - v1 * uv2x) / det
+
+    // Tangent and Bitangent is not perpendicular !!
     f.M[0].x = (v1x * u2y - v2x * u1y) / det;
     f.M[0].y = (v1y * u2y - v2y * u1y) / det;
     f.M[0].z = (v1z * u2y - v2z * u1y) / det;
+
+    f.M[1].x = (v2x * u1x - v1x * u2x) / det;
+    f.M[1].y = (v2y * u1x - v1y * u2x) / det;
+    f.M[1].z = (v2z * u1x - v1z * u2x) / det;
  
-    // n : p20 x p10
+    // n : t cross b
+    Cross(f.M[0], f.M[1], f.M[2]);
 
-    vector3 pb; 
-    pb.x = (-v1x * u2x + v2x * u1x) / det;
-    pb.y = (-v1y * u2x + v2y * u1x) / det;
-    pb.z = (-v1z * u2x + v2z * u1x) / det;
-
-    Cross(f.M[0], pb, f.M[2]);
-    // b : n x t
-
-    Cross(f.M[2], f.M[0], f.M[1]);
-
-    // normalizing each vector
+    // Normalize
+    // normalize each vector
     Normalize(f.M[0]);
     Normalize(f.M[1]);
     Normalize(f.M[2]);
 
+    // make b perpendicular.
+    double dot = f.M[0].x * f.M[1].x + f.M[0].y * f.M[1].y + f.M[0].z * f.M[1].z; // t, b
+    // b - t * dot (t, b)
+    f.M[1].x -= dot * f.M[0].x;
+    f.M[1].y -= dot * f.M[0].y;
+    f.M[1].z -= dot * f.M[0].z;
+    Normalize(f.M[1]);
+
+
+    // Headness of n (cross(n,t) dot b >= 0)
+    vector3 n_t;
+    Cross(f.M[2], f.M[0], n_t);
+    double dot_n_t = n_t.x * f.M[1].x + n_t.y * f.M[1].y + n_t.z * f.M[1].z;
+    if(dot_n_t < 0.0f)
+    {
+            f.M[0].x = -f.M[0].x; f.M[0].y = -f.M[0].y; f.M[0].z = -f.M[0].z;
+    }
+
     Transpose(f.M);
+
 }
 
 int main(int argc, char** argv)
@@ -211,11 +148,6 @@ int main(int argc, char** argv)
         tangent.obj = &objfile;
         tangent.Translate();
 
-        cout<<"No. of vertices: "<<objfile.nVertex<<endl;
-        cout<<"No. of faces: "<<objfile.nFace<<endl;
-        cout<<"No. of Texture: "<<objfile.nTexture<<endl;
-        cout<<"No. of Normal: "<<objfile.nNormal<<endl;
-
-        //objfile.save();
+        objfile.objSaveFile(argv[2], 6);
         return 0;
 }

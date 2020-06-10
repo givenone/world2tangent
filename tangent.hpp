@@ -1,53 +1,9 @@
-#ifndef OBJ_READER_H
-#define OBJ_READER_H
 
-#include <stdlib.h>
-
-typedef struct {
-        double x, y, z;
-} vector3;
-
-typedef struct {
-        double u, v;
-} vector2;
-
-typedef struct {
-        double M[3][3];
-} matrix3;
-
-typedef struct {
-        int v, vt, vn;
-} vertex;
-
-typedef struct {
-        char material[50];
-} mtl;
-
-typedef struct {
-        vertex v[3];
-        mtl* texture;
-        vector3 M[3];
-} face;
-
-
-class objReader
-{
-public:
-        objReader();
-        void objLoadModel();
-        void objLoadFile(char* filename);
-        void objSaveFile(char* filename);
-        char* m;
-
-        size_t size;
-        vector3* vertexArray;
-        vector2* textureArray;
-        vector3* normalArray;
-        face* faceArray;
-
-        int nVertex, nTexture, nNormal, nFace;
-};
-
+#include <obj.hpp>
+#include <stdio.h>
+#include <memory.h>
+#include <iostream>
+#include <math.h>
 class world2Tangent
 {
 public:
@@ -60,5 +16,3 @@ public:
 
         objReader *obj;
 };
-
-#endif

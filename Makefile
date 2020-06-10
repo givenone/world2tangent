@@ -1,11 +1,15 @@
-CC = g++
-OBJS = tangent.o
+CC = gcc
+OBJS = tangent.o obj.o
 
 all: ${OBJS}
 	${CC} ${OBJS} -o tangent
-	
-%.o: %.cpp
-	${CC} -c $*.cpp
+
+obj.o: obj.cpp
+	${CC} -c obj.cpp	
+
+tangent.o: tangent.cpp tangent.hpp
+	${CC} -c tangent.cpp
+
 	
 clean:
 	-rm -rf *.o
