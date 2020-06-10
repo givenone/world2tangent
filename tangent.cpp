@@ -1,3 +1,7 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+#include "obj.hpp"
 #include "tangent.hpp"
 
 using namespace std;
@@ -19,9 +23,9 @@ void world2Tangent::Translate()
             vector3 nxyz = obj->normalArray[normal_idx];
 
             // [nx, ny, nz] dot M( ([T, B, N]^-1)^T)
-            tangentNormalArray[normal_idx].x = nxyz.x * f.M[0].x + nxyz.y * f.M[1].x + nxyz.z * f.M[2].x;
-            tangentNormalArray[normal_idx].y = nxyz.x * f.M[0].y + nxyz.y * f.M[1].y + nxyz.z * f.M[2].y;
-            tangentNormalArray[normal_idx].z = nxyz.x * f.M[0].z + nxyz.y * f.M[1].z + nxyz.z * f.M[2].z;
+            tangentNormalArray[normal_idx].x += nxyz.x * f.M[0].x + nxyz.y * f.M[1].x + nxyz.z * f.M[2].x;
+            tangentNormalArray[normal_idx].y += nxyz.x * f.M[0].y + nxyz.y * f.M[1].y + nxyz.z * f.M[2].y;
+            tangentNormalArray[normal_idx].z += nxyz.x * f.M[0].z + nxyz.y * f.M[1].z + nxyz.z * f.M[2].z;
             normalCount[normal_idx]++;
         }
     }
@@ -142,7 +146,10 @@ int main(int argc, char** argv)
 {
         objReader objfile;
         objfile.objLoadFile(argv[1]);
-        objfile.objLoadModel();
+        objfile.objLoadModel(argv[1]);
+        printf("ok\n");
+
+        printf("%lf %lf %lf\n", objfile.vertexArray[1].x, objfile.vertexArray[1].y, objfile.vertexArray[1].z);
 
         world2Tangent tangent;
         tangent.obj = &objfile;

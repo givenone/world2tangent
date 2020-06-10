@@ -1,3 +1,6 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <memory.h>
 #include "obj.hpp"
 
 objReader::objReader()
@@ -31,7 +34,7 @@ void objReader::objLoadFile(char* filename)
         }
 }
 
-void objReader::objLoadModel()
+void objReader::objLoadModel(char* filename)
 {
         char* p = NULL, * e = NULL;
         bool start = true;
@@ -48,38 +51,47 @@ void objReader::objLoadModel()
                 while (*p++ != (char) 0x0A);
         }
 
+        printf("done?\n");
 
-        vertexArray = (vector3*) malloc(sizeof(vector3) * (nVertex + 1));
-        normalArray = (vector3*) malloc(sizeof(vector3) * (nNormal + 1));
-        textureArray = (vector2*) malloc(sizeof(vector2) * (nTexture + 1));
+        vertexArray = (vector3*) malloc(sizeof(vector3) * nVertex);
+        normalArray = (vector3*) malloc(sizeof(vector3) * nNormal);
+        textureArray = (vector2*) malloc(sizeof(vector2) * nTexture);
         faceArray = (face*) malloc(sizeof(face) * nFace);
 
-        p = m;
+        free(m);
         int nV = 1, nT = 1, nN = 1, nF = 0;
-        while (p != e) {
-                if (memcmp(p, "v ", 2) == 0) {
-                        sscanf(p, "v %lf %lf %lf", &vertexArray[nV].x, &vertexArray[nV].y, &vertexArray[nV].z);
+        printf("?\n");
+
+        FILE* file = fopen(filename, "r");
+
+        while (1) {
+                char lineHeader[128];
+                int res = fscanf(file, "%s", lineHeader);
+                if (res == EOF)
+			break; // EOF = End Of File. Quit the loop.
+
+                if (strcmp("v", lineHeader) == 0) {
+                        fscanf(file, "%lf %lf %lf", &vertexArray[nV].x, &vertexArray[nV].y, &vertexArray[nV].z);
                         nV++;
-                } else if (memcmp(p, "vt", 2) == 0) {
-                        sscanf(p, "vt %lf %lf", &textureArray[nT].u, &textureArray[nT].v);
+                } else if (strcmp("vt", lineHeader) == 0) {
+                        fscanf(file, "%lf %lf", &textureArray[nT].u, &textureArray[nT].v);
                         nT++;
-                } else if (memcmp(p, "vn", 2) == 0) {
-                        sscanf(p, "vn %lf %lf %lf", &normalArray[nN].x, &normalArray[nN].y, &normalArray[nN].z);
+                } else if (strcmp("vn", lineHeader) == 0) {
+                        fscanf(file, "%lf %lf %lf", &normalArray[nN].x, &normalArray[nN].y, &normalArray[nN].z);
                         nN++;
-                } else if (memcmp(p, "f", 1) == 0) {
-                        sscanf(p, "f %d/%d/%d %d/%d/%d %d/%d/%d", 
+                } else if (strcmp("f", lineHeader) == 0) {
+                        fscanf(file, "%d/%d/%d %d/%d/%d %d/%d/%d", 
                         &faceArray[nF].v[0].v, &faceArray[nF].v[0].vt, &faceArray[nF].v[0].vn,
                         &faceArray[nF].v[1].v, &faceArray[nF].v[1].vt, &faceArray[nF].v[1].vn,
                         &faceArray[nF].v[2].v, &faceArray[nF].v[2].vt, &faceArray[nF].v[2].vn);
-                        faceArray[nF].texture = texture;
+                        //faceArray[nF].texture = texture;
                         nF++;
-                } else if (memcmp(p, "usemtl", 6) == 0) {
+                } else if (strcmp(lineHeader, "usemtl") == 0) {
                         texture = (mtl*) malloc(sizeof(mtl));
-                        sscanf(p, "usemtl %s", &(texture->material));
-                        sscanf(p, "%s", tex);
+                        fscanf(file, "%s", (texture->material));
                 }
-                while (*p++ != (char) 0x0A);
         }
+        printf("%d %d %d %d\n", nV, nT, nN, nF);
 }
 
 void objReader::objSaveFile(char* filename, int precision)
@@ -102,19 +114,16 @@ void objReader::objSaveFile(char* filename, int precision)
   
         for(int v=1; v<=nVertex; v++)
         {   
-            printf("1\n");
-            fprintf(f, "v %lf %lf %lf\n",vertexArray[v].x, vertexArray[v].y, vertexArray[v].z );
-//                fprintf(f, formv, vertexArray[v].x, vertexArray[v].y, vertexArray[v].z);
+                fprintf(f, formv, vertexArray[v].x, vertexArray[v].y, vertexArray[v].z);
                                 
         }
         for(int v=1; v<=nTexture; v++)
         {
-                                            printf(formv,vertexArray[v].x, vertexArray[v].y, vertexArray[v].z);
                 fprintf(f, formt, textureArray[v].u, textureArray[v].v);
         }        
         for(int v=1; v<=nNormal; v++)
         {
-                fprintf(f, formv, normalArray[v].x, normalArray[v].y, normalArray[v].z);
+                fprintf(f, formn, normalArray[v].x, normalArray[v].y, normalArray[v].z);
         }
 
         // usemtl if mtl file exist.
@@ -123,9 +132,9 @@ void objReader::objSaveFile(char* filename, int precision)
         for(int nF=0; nF<nFace; nF++)
         {
                 fprintf(f, "f %d/%d/%d %d/%d/%d %d/%d/%d\n",
-                &faceArray[nF].v[0].v, &faceArray[nF].v[0].vt, &faceArray[nF].v[0].vn,
-                &faceArray[nF].v[1].v, &faceArray[nF].v[1].vt, &faceArray[nF].v[1].vn,
-                &faceArray[nF].v[2].v, &faceArray[nF].v[2].vt, &faceArray[nF].v[2].vn);   
+                faceArray[nF].v[0].v, faceArray[nF].v[0].vt, faceArray[nF].v[0].vn,
+                faceArray[nF].v[1].v, faceArray[nF].v[1].vt, faceArray[nF].v[1].vn,
+                faceArray[nF].v[2].v, faceArray[nF].v[2].vt, faceArray[nF].v[2].vn);   
         } 
 
         fclose(f);

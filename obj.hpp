@@ -1,5 +1,3 @@
-#include<stdlib.h>
-
 typedef struct {
         double x, y, z;
 } vector3;
@@ -29,7 +27,7 @@ class objReader
 {
 public:
         objReader();
-        void objLoadModel();
+        void objLoadModel(char* filename);
         void objLoadFile(char* filename);
         void objSaveFile(char* filename, int precision);
         char* m;

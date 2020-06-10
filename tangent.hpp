@@ -1,9 +1,3 @@
-
-#include <obj.hpp>
-#include <stdio.h>
-#include <memory.h>
-#include <iostream>
-#include <math.h>
 class world2Tangent
 {
 public:
